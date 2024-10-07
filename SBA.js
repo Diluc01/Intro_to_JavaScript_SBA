@@ -76,19 +76,41 @@ const LearnerSubmissions = [
 ];
 
 function getLearnerData(course, ag, submissions) {
+  let result = [];
+
   try {
     if (ag.course_id !== course.id) {
       throw new Error("invalid input");
     }
 
-    if (ag.assignments[0].points_possible === 0) {
-      throw new Error("invalid number");
+    for (let i = 0; i < ag.assignments.length; i++) {
+      if (ag.assignments[i].points_possible === 0) {
+        throw new Error("invalid number");
+      }
+    }
+    for (let j = 0; j < submissions.length; j++) {
+      if (typeof submissions[j].submission.score === String) {
+        throw new Error("invalid input");
+      }
     }
 
-    if (typeof submissions[0].submission.score === String) {
-      throw new Error("invalid input");
+    if (ag.assignments === ag.assignments[2]) {
+      ag.assignments.pop();
+    }
+    for (let k = 0; k < submissions.length; k++) {
+      if (submissions[k].submission.submitted_at > ag.assignments[k]) {
+        submissions[k].submission.score - submissions[k].submission.score * 0.1;
+      }
+    }
+    for (let l = 0; l < submissions.length; l++) {
+      result.push(submissions[l].learner_id);
     }
   } catch (err) {
     console.log(err);
   }
+  return result;
 }
+
+const result = getLearnerData(CourseInfo, AssignmentGroup, LearnerSubmissions);
+
+console.log(result);
