@@ -38,7 +38,7 @@ const LearnerSubmissions = [
     assignment_id: 1,
     submission: {
       submitted_at: "2023-01-25",
-      score: 47,
+      score: 80,
     },
   },
   {
@@ -75,42 +75,70 @@ const LearnerSubmissions = [
   },
 ];
 
+function mismatchID(course, ag) {
+  try {
+    if (course.id !== ag.course_id) {
+      throw new Error(
+        `Mismatch: Course ID ${course.id} does not match Course Info ${ag.course_id}`
+      );
+    }
+  } catch (err) {
+    console.log(`Error: ${err.message}`);
+  }
+}
+
+function dataErrors(ag) {
+  try {
+    for (let i = 0; i < ag.assignments.length; i++) {
+      if (ag.assignments[i].points_possible === 0) {
+        throw new Error("Invalid data input");
+      }
+    }
+  } catch (err) {
+    console.log(`Error: ${err.message}`);
+  }
+}
+
+function incorrectValue(submissions) {
+  try {
+    for (let i = 0; i < submissions.length; i++) {
+      if (typeof submissions[i].submission.score !== "number") {
+        throw new Error("Invalid data type input");
+      }
+    }
+  } catch (err) {
+    console.log(`Error: ${err.message}`);
+  }
+}
+
+function isAssignmentDue(submitted_date) {
+  const now = new Date();
+
+  return new Date(submitted_date) <= now;
+}
+
+function lateSubmission(ag, submissions) {}
+
 function getLearnerData(course, ag, submissions) {
   let result = [];
 
-  try {
-    if (ag.course_id !== course.id) {
-      throw new Error("invalid input");
-    }
+  //   Validation
+  mismatchID(course, ag);
+  dataErrors(ag);
+  incorrectValue(submissions);
 
-    for (let i = 0; i < ag.assignments.length; i++) {
-      if (ag.assignments[i].points_possible === 0) {
-        throw new Error("invalid number");
-      }
-    }
-    for (let j = 0; j < submissions.length; j++) {
-      if (typeof submissions[j].submission.score === String) {
-        throw new Error("invalid input");
-      }
-    }
+  for (let i = 0; i < submissions.length; i++) {
+    // Check if the assignment is Due
+    let isDue = isAssignmentDue(submissions[i].submission.submitted_at);
 
-    if (ag.assignments === ag.assignments[2]) {
-      ag.assignments.pop();
-    }
-    for (let k = 0; k < submissions.length; k++) {
-      if (submissions[k].submission.submitted_at > ag.assignments[k]) {
-        submissions[k].submission.score - submissions[k].submission.score * 0.1;
-      }
-    }
-    for (let l = 0; l < submissions.length; l++) {
-      result.push(submissions[l].learner_id);
-    }
-  } catch (err) {
-    console.log(err);
+    // Deduct Points if it is due
+
+    result.push(submissions[i].learner_id);
   }
+
   return result;
 }
 
 const result = getLearnerData(CourseInfo, AssignmentGroup, LearnerSubmissions);
 
-console.log(result);
+console.log("result: ", result);
