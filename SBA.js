@@ -75,11 +75,11 @@ const LearnerSubmissions = [
   },
 ];
 
-function mismatchID(course, ag) {
+function mismatchID(course, assignmentGroup) {
   try {
-    if (course.id !== ag.course_id) {
+    if (course.id !== assignmentGroup.course_id) {
       throw new Error(
-        `Mismatch: Course ID ${course.id} does not match Course Info ${ag.course_id}`
+        `Mismatch: Course ID ${course.id} does not match Course Info ${assignmentGroup.course_id}`
       );
     }
   } catch (err) {
@@ -87,10 +87,10 @@ function mismatchID(course, ag) {
   }
 }
 
-function dataErrors(ag) {
+function dataErrors(assignmentGroup) {
   try {
-    for (let i = 0; i < ag.assignments.length; i++) {
-      if (ag.assignments[i].points_possible === 0) {
+    for (let i = 0; i < assignmentGroup.assignments.length; i++) {
+      if (assignmentGroup.assignments[i].points_possible === 0) {
         throw new Error("Invalid data input");
       }
     }
@@ -113,30 +113,84 @@ function incorrectValue(submissions) {
 
 function isAssignmentDue(submitted_date) {
   const now = new Date();
-
   return new Date(submitted_date) <= now;
 }
 
-function lateSubmission(ag, submissions) {}
+function lateSubmission(submittedDate, dueDate) {
+  let submitted = new Date(submittedDate);
+  let due = new Date(dueDate);
+  return submitted > due;
+}
 
-function getLearnerData(course, ag, submissions) {
-  let result = [];
+function getLearnerData(course, assignmentGroup, submissions) {
+  let results = [];
 
   //   Validation
-  mismatchID(course, ag);
-  dataErrors(ag);
+  mismatchID(course, assignmentGroup);
+  dataErrors(assignmentGroup);
   incorrectValue(submissions);
 
   for (let i = 0; i < submissions.length; i++) {
+    let submission = submissions[i];
+    let learnerId = submission.learner_id;
+    let assignmentId = submission.assignment_id;
+
+    let assignment = null;
+    for (let j = 0; j < assignmentGroup.assignments.length; j++) {
+      if (assignmentGroup.assignments[j].id == assignmentId) {
+        assignment = assignmentGroup.assignments[j];
+        break;
+      }
+    }
+
     // Check if the assignment is Due
-    let isDue = isAssignmentDue(submissions[i].submission.submitted_at);
+    if (assignment && isAssignmentDue(submissions[i].submission.submitted_at)) {
+      let score = submission.submission.score;
 
-    // Deduct Points if it is due
+      if (
+        lateSubmission(submission.submission.submitted_at, assignment.due_at)
+      ) {
+        score = score * 0.9;
+      }
 
-    result.push(submissions[i].learner_id);
+      let percentageScore = (score / assignment.points_possible) * 100;
+
+      let studentData = null;
+
+      for (let x = 0; x < results.length; x++) {
+        if (results[x].id == learnerId) {
+          studentData = results[x];
+        }
+      }
+
+      if (!studentData) {
+        studentData = { id: learnerId, avg: 0 };
+        results.push(studentData);
+      }
+
+      studentData[assignmentId] = percentageScore;
+
+      console.log("studentData: ", studentData);
+    }
+
+    for (let i = 0; i < results.length; i++) {
+      let individualStudentData = results[i];
+      let totalScore = 0;
+      let totalAssignments = 0;
+
+      for (let j = 0; j < assignmentGroup.assignments.length; j++) {
+        let assignmentId = assignmentGroup.assignments[j].id;
+        if (individualStudentData.hasOwnProperty(assignmentId)) {
+          totalScore += individualStudentData[assignmentId];
+          totalAssignments++;
+        }
+      }
+
+      individualStudentData.avg = totalScore / totalAssignments;
+    }
+
+    return results;
   }
-
-  return result;
 }
 
 const result = getLearnerData(CourseInfo, AssignmentGroup, LearnerSubmissions);
